@@ -6,11 +6,11 @@
 // const char* ssid = "BITA HOMES";
 // const char* password = "xttok2fb";
 String Name = "ZoneMaster";
-String myID = "16092100087";
+String myID = "00000000000";
 String substrin1 = myID.substring(2, 6);
 String substrin2 = myID.substring(9, 11);
 String hostname = Name + substrin1 + substrin2;
-String devicename = "ZMB-AAA015";
+String devicename = "ZMB-AAA017";
 String savedatacommand = "";
 int device_type = 3;
 String devversion = "1.0";
@@ -267,247 +267,246 @@ void hour_day_datetime_now(String hours_ch, String days_ch, String time_now) {
   preferences.end();
 }
 
-// Function to extract values for specific keys from lastcmd field
-String extractValues(const String& lastcmd, String keys[], int8_t numKeys) {
-  String result = "";
-  String value_by_app = "";
+// // Function to extract values for specific keys from lastcmd field
+// String extractValues(const String& lastcmd, String keys[], int8_t numKeys) {
+//   String result = "";
+//   String value_by_app = "";
 
-  for (uint8_t i = 0; i < numKeys; i++) {
+//   for (uint8_t i = 0; i < numKeys; i++) {
 
-    String key = keys[i];
-    String key_with_equals = key + "=";
-    int8_t keyStart = lastcmd.indexOf(key_with_equals);
+//     String key = keys[i];
+//     String key_with_equals = key + "=";
+//     int8_t keyStart = lastcmd.indexOf(key_with_equals);
 
-    if (keyStart != -1) {
-      int8_t valueStart = lastcmd.indexOf('=', keyStart);
+//     if (keyStart != -1) {
+//       int8_t valueStart = lastcmd.indexOf('=', keyStart);
 
-      if (valueStart != -1) {
-        int8_t valueEnd = lastcmd.indexOf(';', valueStart);
+//       if (valueStart != -1) {
+//         int8_t valueEnd = lastcmd.indexOf(';', valueStart);
 
-        if (valueEnd == -1) {
-          valueEnd = lastcmd.length();  // Value extends to the end if no semicolon
-        }
+//         if (valueEnd == -1) {
+//           valueEnd = lastcmd.length();  // Value extends to the end if no semicolon
+//         }
 
-        value_by_app = lastcmd.substring(valueStart + 1, valueEnd);
-        result += key + " = " + value_by_app + "\n";
-        update_from_pref = true;
+//         value_by_app = lastcmd.substring(valueStart + 1, valueEnd);
+//         result += key + " = " + value_by_app + "\n";
+//         update_from_pref = true;
 
-        if (key == "seasonsw") {
-          seasonsw = value_by_app.toInt();
-          // if (prevseasonsw != seasonsw) {
-          if (seasonsw == 1) {
-            if (beca_mode != 1) {
-              writeSingleRegister(1, 0x02, 1);
-            }
-            // prevseasonsw = seasonsw;
-          } else if (seasonsw == 0) {
-            if (beca_mode != 0) {
-              writeSingleRegister(1, 0x02, 0);
-            }
-            // prevseasonsw = seasonsw;
-          }
-          // }
-        } else if (key == "dmptempsp") {
-          dmptempsp = value_by_app.toInt();
-          if (prevdmptempsp != dmptempsp) {
-            if (dmptempsp > 5 && dmptempsp < 35) {
-              writeSingleRegister(1, 0x03, dmptempsp * 10);
-            } else if (dmptempsp >= 35) {
-              writeSingleRegister(1, 0x03, 35 * 10);
-            } else if (dmptempsp <= 5) {
-              writeSingleRegister(1, 0x03, 5 * 10);
-            }
-            prevdmptempsp = dmptempsp;
-          }
-        } else if (key == "dampertsw") {
-          dampertsw = value_by_app.toInt();  // 0
+//         if (key == "seasonsw") {
+//           seasonsw = value_by_app.toInt();
+//           // if (prevseasonsw != seasonsw) {
+//           if (seasonsw == 1) {
+//             if (beca_mode != 1) {
+//               writeSingleRegister(1, 0x02, 1);
+//             }
+//             // prevseasonsw = seasonsw;
+//           } else if (seasonsw == 0) {
+//             if (beca_mode != 0) {
+//               writeSingleRegister(1, 0x02, 0);
+//             }
+//             // prevseasonsw = seasonsw;
+//           }
+//           // }
+//         } else if (key == "dmptempsp") {
+//           dmptempsp = value_by_app.toInt();
+//           if (prevdmptempsp != dmptempsp) {
+//             if (dmptempsp > 5 && dmptempsp < 35) {
+//               writeSingleRegister(1, 0x03, dmptempsp * 10);
+//             } else if (dmptempsp >= 35) {
+//               writeSingleRegister(1, 0x03, 35 * 10);
+//             } else if (dmptempsp <= 5) {
+//               writeSingleRegister(1, 0x03, 5 * 10);
+//             }
+//             prevdmptempsp = dmptempsp;
+//           }
+//         } else if (key == "dampertsw") {
+//           dampertsw = value_by_app.toInt();  // 0
 
-#ifdef DEBUG
-          Serial.print("Damper state changed to: ");
-          Serial.println(dampertsw);
-#endif
+// #ifdef DEBUG
+//           Serial.print("Damper state changed to: ");
+//           Serial.println(dampertsw);
+// #endif
 
-          if (dampertsw == 0 && beca_power != 0) {
-            writeSingleRegister(1, 0x00, 0);
-          } else if (dampertsw == 1 && beca_power != 1) {
-            writeSingleRegister(1, 0x00, 1);
-          } else if (dampertsw == 0 && beca_power == 0) {
-            writeSingleRegister(1, 0x00, 0);
-          }
-        } else if (key == "supcfm") {
-          supcfm = value_by_app;
-          int dash_index = value_by_app.indexOf("-");
-          if (cfm_flag != true) {
-            if (dash_index != -1) {
-              start_value = value_by_app.substring(0, dash_index).toInt();
-              end_value = value_by_app.substring(dash_index + 1).toInt();
-              // CFM_min = map(start_value, 0, 100, servo_close_pos, servo_open_pos);
-              CFM_max = map(end_value, 0, 100, servo_close_pos, servo_open_pos);
-              preferences.begin("CFM", false);
-              preferences.putInt("cfm_min", start_value);
-              preferences.putInt("cfm_max", end_value);
-              preferences.end();
-              supcfm = String(start_value) + "-" + String(end_value);
-#ifdef DEBUG
-              Serial.print("supcfm: ");
-              Serial.println(supcfm);
-#endif
-            }
-          }
-        } else if (key == "retcfm") {
-          retcfm = value_by_app;
-        } else if (key == "hoursch") {
+//           if (dampertsw == 0 && beca_power != 0) {
+//             writeSingleRegister(1, 0x00, 0);
+//           } else if (dampertsw == 1 && beca_power != 1) {
+//             writeSingleRegister(1, 0x00, 1);
+//           } else if (dampertsw == 0 && beca_power == 0) {
+//             writeSingleRegister(1, 0x00, 0);
+//           }
+//         } else if (key == "supcfm") {
+//           supcfm = value_by_app;
+//           int dash_index = value_by_app.indexOf("-");
+//           if (cfm_flag != true) {
+//             if (dash_index != -1) {
+//               start_value = value_by_app.substring(0, dash_index).toInt();
+//               end_value = value_by_app.substring(dash_index + 1).toInt();
+//               // CFM_min = map(start_value, 0, 100, servo_close_pos, servo_open_pos);
+//               CFM_max = map(end_value, 0, 100, servo_close_pos, servo_open_pos);
+//               preferences.begin("CFM", false);
+//               preferences.putInt("cfm_min", start_value);
+//               preferences.putInt("cfm_max", end_value);
+//               preferences.end();
+//               supcfm = String(start_value) + "-" + String(end_value);
+// #ifdef DEBUG
+//               Serial.print("supcfm: ");
+//               Serial.println(supcfm);
+// #endif
+//             }
+//           }
+//         } else if (key == "retcfm") {
+//           retcfm = value_by_app;
+//         } else if (key == "hoursch") {
 
-          int8_t date_time_now = value_by_app.indexOf("|daysch=");
-          String hoursch = value_by_app.substring(0, date_time_now);
+//           int8_t date_time_now = value_by_app.indexOf("|daysch=");
+//           String hoursch = value_by_app.substring(0, date_time_now);
 
-          // Extract the "daysch" part (everything after "hoursch" but before "datetime_now")
-          String daysch = value_by_app.substring(date_time_now);
+//           // Extract the "daysch" part (everything after "hoursch" but before "datetime_now")
+//           String daysch = value_by_app.substring(date_time_now);
 
-          // Construct the new string
-          timesch = "hoursch=" + hoursch + daysch;
+//           // Construct the new string
+//           timesch = "hoursch=" + hoursch + daysch;
 
-          preferences.begin("timeenable", false);
-          preferences.putString("timesch", timesch);
-          preferences.end();
+//           preferences.begin("timeenable", false);
+//           preferences.putString("timesch", timesch);
+//           preferences.end();
 
-          hoursch = value_by_app.substring(0, value_by_app.indexOf("|"));
+//           hoursch = value_by_app.substring(0, value_by_app.indexOf("|"));
 
-#ifdef DEBUG
-          Serial.print("hoursch:: ");
-          Serial.println(hoursch);
-#endif
+// #ifdef DEBUG
+//           Serial.print("hoursch:: ");
+//           Serial.println(hoursch);
+// #endif
 
-          int8_t days = value_by_app.indexOf("daysch=");
-          daysch;
-          if (days != -1) {
-            daysch = value_by_app.substring(days + 7, value_by_app.indexOf("|date"));
-          }
+//           int8_t days = value_by_app.indexOf("daysch=");
+//           daysch;
+//           if (days != -1) {
+//             daysch = value_by_app.substring(days + 7, value_by_app.indexOf("|date"));
+//           }
 
-          int8_t date_time = value_by_app.indexOf("datetime_now");
-          String datetime_now;
-          if (date_time != -1) {
-            datetime_now = value_by_app.substring(date_time + 13);
-#ifdef DEBUG
-            Serial.print("date_time_when_scheduled:: ");
-            Serial.println(datetime_now);
-#endif
-          }
-          hour_day_datetime_now(hoursch, daysch, datetime_now);
-        } else if (key == "timeschen") {
-          timeschen = value_by_app.toInt();
-          preferences.begin("timeenable", false);
-          preferences.putBool("timeschen", timeschen);
+//           int8_t date_time = value_by_app.indexOf("datetime_now");
+//           String datetime_now;
+//           if (date_time != -1) {
+//             datetime_now = value_by_app.substring(date_time + 13);
+// #ifdef DEBUG
+//             Serial.print("date_time_when_scheduled:: ");
+//             Serial.println(datetime_now);
+// #endif
+//           }
+//           hour_day_datetime_now(hoursch, daysch, datetime_now);
+//         } else if (key == "timeschen") {
+//           timeschen = value_by_app.toInt();
+//           preferences.begin("timeenable", false);
+//           preferences.putBool("timeschen", timeschen);
 
-        } else if (key == "dampstate") {
-          dampstate = value_by_app;
-        } else if (key == "alarm") {
-          alarm_string = value_by_app.toInt();
-        } else if (key == "timenow") {
-          timenow = value_by_app;
-        } else if (key == "packet_id") {
-          packet_sequence = value_by_app.toInt();
-        } else {
-        }
-      }
-    }
-  }
+//         } else if (key == "dampstate") {
+//           dampstate = value_by_app;
+//         } else if (key == "alarm") {
+//           alarm_string = value_by_app.toInt();
+//         } else if (key == "timenow") {
+//           timenow = value_by_app;
+//         } else if (key == "packet_id") {
+//           packet_sequence = value_by_app.toInt();
+//         } else {
+//         }
+//       }
+//     }
+//   }
 
-  // If no keys are found, provide default message
-  if (result.length() == 0) {
-    result = "No values found.";
-  } else {
-    HTTPClient http;
-    String serverpath = "http://209.38.236.253/api/clearlastcmd?id=" + myID;
-    http.begin(serverpath);
-    int code_by_http_get = http.GET();
-#ifdef DEBUG
-    Serial.print("code_by_http_get: ");
-    Serial.println(code_by_http_get);
-#endif
-    if (code_by_http_get > 0) {
-      String payload = http.getString();
-#ifdef DEBUG
-      Serial.print("code_by_http_get: ");
-      Serial.println(code_by_http_get);
-      Serial.print("payload: ");
-      Serial.println(payload);
-#endif
-      parseJson(payload);
-    }
-  }
-  return result;
-}
+//   // If no keys are found, provide default message
+//   if (result.length() == 0) {
+//     result = "No values found.";
+//   } else {
+//     HTTPClient http;
+//     String serverpath = "http://209.38.236.253/api/clearlastcmd?id=" + myID;
+//     http.begin(serverpath);
+//     int code_by_http_get = http.GET();
+// #ifdef DEBUG
+//     Serial.print("code_by_http_get: ");
+//     Serial.println(code_by_http_get);
+// #endif
+//     if (code_by_http_get > 0) {
+//       String payload = http.getString();
+// #ifdef DEBUG
+//       Serial.print("code_by_http_get: ");
+//       Serial.println(code_by_http_get);
+//       Serial.print("payload: ");
+//       Serial.println(payload);
+// #endif
+//       parseJson(payload);
+//     }
+//   }
+//   return result;
+// }
 
-void get_api(String server_path) {
+// void get_api(String server_path) {
 
-  if (WiFi.status() == WL_CONNECTED) {
+//   if (WiFi.status() == WL_CONNECTED) {
 
-    // Start HTTP Client
-    HTTPClient http;
-    http.begin(server_path);
-    int code_by_http_get = http.GET();
+//     HTTPClient http;
+//     http.begin(server_path);
+//     int code_by_http_get = http.GET();
 
-#ifdef DEBUG
-    Serial.print("code_by_http_get: ");
-    Serial.println(code_by_http_get);
-#endif
+// #ifdef DEBUG
+//     Serial.print("code_by_http_get: ");
+//     Serial.println(code_by_http_get);
+// #endif
 
-    if (code_by_http_get > 0) {
-      String payload = http.getString();
-#ifdef DEBUG
-      Serial.print("code_by_http_get: ");
-      Serial.println(code_by_http_get);
-      Serial.print("payload: ");
-      Serial.println(payload);
-#endif
-      parseJson(payload);
-      String value_by_get = extractValues(lastcmd, keys, numKeys);
-#ifdef DEBUG
-      Serial.println(value_by_get);
-#endif
-    }  //
+//     if (code_by_http_get > 0) {
+//       String payload = http.getString();
+// #ifdef DEBUG
+//       Serial.print("code_by_http_get: ");
+//       Serial.println(code_by_http_get);
+//       Serial.print("payload: ");
+//       Serial.println(payload);
+// #endif
+//       parseJson(payload);
+//       String value_by_get = extractValues(lastcmd, keys, numKeys);
+// #ifdef DEBUG
+//       Serial.println(value_by_get);
+// #endif
+//     }  //
 
-    else {
-#ifdef DEBUG
-      Serial.println("Error on HTTP request");
-#endif
-    }
-    http.end();
-  }
-}
+//     else {
+// #ifdef DEBUG
+//       Serial.println("Error on HTTP request");
+// #endif
+//     }
+//     http.end();
+//   }
+// }
 
-void makestring() {
-  dataarray = "";
+// void makestring() {
+//   dataarray = "";
 
-  dmptemp = temp_by_beca;
-  if (beca_mode == 0 || beca_mode == 2) {
-    seasonsw = 0;
-  } else {
-    seasonsw = 1;
-  }
+//   dmptemp = temp_by_beca;
+//   if (beca_mode == 0 || beca_mode == 2) {
+//     seasonsw = 0;
+//   } else {
+//     seasonsw = 1;
+//   }
 
-  // Constructing JSON for dataarray
-  dataarray += "{";
-  dataarray += "\"seasonsw\":" + String(seasonsw) + ",";
-  dataarray += "\"dmptemp\":\"" + String(dmptemp) + "\",";
-  dataarray += "\"dmptempsp\":\"" + String(setpointt) + "\",";
-  dataarray += "\"dampertsw\":" + String(beca_power) + ",";
-  dataarray += "\"supcfm\":\"" + String(supcfm) + "\",";
-  dataarray += "\"retcfm\":\"" + String(retcfm) + "\",";
-  dataarray += "\"timesch\":\"" + String(timesch) + "\",";
-  dataarray += "\"timeschen\":" + String(timeschen) + ",";
-  dataarray += "\"dampstate\":" + String(dampstate) + ",";
-  dataarray += "\"alarm\":\"" + alarm_string + "\",";
-  dataarray += "\"timenow\":\"" + String(timenow) + "\",";
-  dataarray += "\"ip_address\":\"" + myIP + "\",";
-  dataarray += "\"packet_id\":" + String(packet_sequence) + "";
-  dataarray += "}";
-#ifdef DEBUG
-  Serial.print("Data Array");
-  Serial.println(dataarray);
-#endif
-}
+//   // Constructing JSON for dataarray
+//   dataarray += "{";
+//   dataarray += "\"seasonsw\":" + String(seasonsw) + ",";
+//   dataarray += "\"dmptemp\":\"" + String(dmptemp) + "\",";
+//   dataarray += "\"dmptempsp\":\"" + String(setpointt) + "\",";
+//   dataarray += "\"dampertsw\":" + String(beca_power) + ",";
+//   dataarray += "\"supcfm\":\"" + String(supcfm) + "\",";
+//   dataarray += "\"retcfm\":\"" + String(retcfm) + "\",";
+//   dataarray += "\"timesch\":\"" + String(timesch) + "\",";
+//   dataarray += "\"timeschen\":" + String(timeschen) + ",";
+//   dataarray += "\"dampstate\":" + String(dampstate) + ",";
+//   dataarray += "\"alarm\":\"" + alarm_string + "\",";
+//   dataarray += "\"timenow\":\"" + String(timenow) + "\",";
+//   dataarray += "\"ip_address\":\"" + myIP + "\",";
+//   dataarray += "\"packet_id\":" + String(packet_sequence) + "";
+//   dataarray += "}";
+// #ifdef DEBUG
+//   Serial.print("Data Array");
+//   Serial.println(dataarray);
+// #endif
+// }
 
 // void Extract_by_json(String incomingMessage) {
 //   // Allocate memory for JSON document

@@ -1,6 +1,7 @@
 #define DEBUG
 
 #include <Preferences.h>
+#include <ESPmDNS.h>
 
 Preferences preferences;
 
@@ -20,7 +21,7 @@ int value = 0;
 const int Buzzer_Pin = 25;
 
 int16_t servo_open_pos = 135;
-int16_t servo_close_pos = 45;
+int16_t servo_close_pos = 38;
 int16_t last_pos_servo;
 int8_t servo_delay = 35;
 bool beca_status = false;
@@ -58,6 +59,10 @@ bool update_from_pref = true;
 #include "Servo.h"
 #include "ServerForWiFiCredentials.h"
 #include "OLED_Display.h"
+
+String device_topic = "/KRC2/" + devicename;
+String device_topic2 = "/KRC/" + devicename;
+
 
 
 void Pot_Calib(int16_t min, int16_t max) {
@@ -145,43 +150,58 @@ void Extract_by_json(String incomingMessage) {
     return;
   }
 
-  String seasonsw = doc["seasonsw"];
-  String dmptempsp = doc["dmptempsp"];
-  String dampertsw = doc["dampertsw"];
-  String supcfm = doc["supcfm"];
-  // timesch = doc["timesch"];
-  String dampstate = doc["dampstate"];
-
-
-
+  seasonsw = doc["seasonsw"].as<int>();
+  dmptempsp = doc["dmptempsp"].as<int>();
+  dampertsw = doc["dampertsw"].as<int>();
+  supcfm = doc["supcfm"].as<String>();
+  dampstate = doc["dampstate"].as<int>();
 
   cfm_flag = false;
 
-
-
-  // packet_id = doc["packet_id"];
-  if (dampertsw == "true") {
-    beca_power = 1;
-
-  } else {
-    beca_power = 0;
+  if (beca_power != dampertsw) {
+    if (dampertsw == 1) {
+      beca_power = 1;
+      writeSingleRegister(1, 0x00, 1);
+    } else {
+      beca_power = 0;
+      writeSingleRegister(1, 0x00, 0);
+    }
   }
-  // beca_power = dampertsw;
-  if (seasonsw == "true") {
-    beca_mode = 0;
-  } else {
-    beca_mode = 1;
+
+  if (beca_mode != seasonsw) {
+    if (seasonsw == 1) {
+      beca_mode = 1;
+      Serial.println("seasonsw == 1 and beca_mode = 1");
+      writeSingleRegister(1, 0x02, 1);
+
+    } else {
+      beca_mode = 0;
+      Serial.println("seasonsw == 0 and beca_mode = 0");
+      writeSingleRegister(1, 0x02, 0);
+    }
   }
-  // beca_mode = seasonsw;
-  setpointt = dmptempsp.toInt();
+
+  if (setpointt != dmptempsp) {
+    if (dmptempsp >= 5 || dmptempsp < 36) {
+      setpointt = dmptempsp;
+      writeSingleRegister(1, 0x03, setpointt * 10);
+    }
+  }
+
   int dash_index = supcfm.indexOf("-");
 
   start_value = supcfm.substring(0, dash_index).toInt();
   end_value = supcfm.substring(dash_index + 1).toInt();
   CFM_max = map(end_value, 0, 100, servo_close_pos, servo_open_pos);
 
+  // writeSingleRegister(1, 0x03, setpointt * 10);
 
-  // CFM_
+  // CFM
+
+  Serial.println("");
+  Serial.println("---------------------------------------------");
+
+
 
   Serial.print("beca_power: ");
   Serial.println(beca_power);
@@ -192,8 +212,6 @@ void Extract_by_json(String incomingMessage) {
   Serial.print("CFM_max: ");
   Serial.println(CFM_max);
 
-  Serial.println("");
-  Serial.println("---------------------------------------------");
   Serial.println("Extracted Values:");
   Serial.print("Season Switch: ");
   Serial.println(beca_mode);
@@ -213,6 +231,30 @@ void Extract_by_json(String incomingMessage) {
   Serial.println("");
 }
 
+void publishJson() {
+  StaticJsonDocument<200> doc;
+  doc["seasonsw"] = String(beca_mode);
+  doc["dmptemp"] = String(temp_by_beca);
+  doc["dmptempsp"] = String(setpointt);
+  doc["dampertsw"] = String(beca_power);
+  doc["supcfm"] = String(end_value);
+  if (dampertsw == 1) {
+    doc["dampstate"] = "Open";
+  } else {
+    doc["dampstate"] = "Close";
+  }
+  // doc["dampstate"] = "open";
+
+  // Message arrived on topic: /KRC/ZMD-AAA008. Message: {"seasonsw":"0","dmptempsp":"20","dampertsw":"0","supcfm":"0-50","dampstate":"Close"}
+  // Message arrived on topic: /KRC/ZMD-AAA008. Message: {"seasonsw":"0","dmptempsp":"20","dampertsw":"0","supcfm":"0-50","dampstate":"Close"}
+  // Changing output to Message arrived on topic: /KRC/ZMD-AAA008. Message: {"seasonsw":"false","dmptempsp":"20.0","dampertsw":"true","supcfm":"40 - 80","dampstate":"true"}
+
+  char jsonBuffer[512];
+  size_t n = serializeJson(doc, jsonBuffer);
+  client.publish(device_topic2.c_str(), jsonBuffer);
+  Serial.println("JSON message published");
+}
+
 void callback(char* topic, byte* message, unsigned int length) {
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
@@ -227,7 +269,7 @@ void callback(char* topic, byte* message, unsigned int length) {
 
   Extract_by_json(messageTemp);
 
-  if (String(topic) == "/KRC/1") {
+  if (String(topic) == device_topic) {  // /KRC/ZMB-AAA001
     Serial.print("Changing output to ");
     if (messageTemp == "on") {
       Serial.println("on");
@@ -240,11 +282,11 @@ void callback(char* topic, byte* message, unsigned int length) {
 }
 
 void reconnect() {
-  while (!client.connected()) {
+  if (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    if (client.connect("ZMB-AAA015")) {
+    if (client.connect(devicename.c_str())) {
       Serial.println("connected");
-      client.subscribe("/KRC/1");
+      client.subscribe(device_topic.c_str());
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -255,13 +297,14 @@ void reconnect() {
 }
 
 
+
+
 void setup() {
 
-  setup_wifi_credentials();
-  macaddress = WiFi.macAddress();
-  Int_Servo();
+#ifdef DEBUG
+  Serial.begin(115200);
+#endif
 
-  Wire.begin(18, 19);
   display.begin(OLED_Address, true);  // Address 0x3C default
 
   display.clearDisplay();
@@ -272,32 +315,11 @@ void setup() {
   display.drawBitmap(1, 19, BITA_LOGO, 32, 32, SH110X_WHITE);
   display.display();
 
-#ifdef DEBUG
-  Serial.begin(115200);
-#endif
+
+  Int_Servo();
 
 
-
-
-
-
-  // Serial.begin(115200);
-
-  // WiFi.begin(ssid.c_str(), password.c_str());
-  // Serial.print("Connecting to WiFi");
-  // while (WiFi.status() != WL_CONNECTED) {
-  //   delay(500);
-  //   Serial.print(".");
-  // }
-  // Serial.println(" connected!");
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-  // client.setKeepAlive(60);
-  client.setKeepAlive(60);
-  client.setSocketTimeout(30);
-  client.setBufferSize(1024);
-  // client.setDebugOutput(true);
-
+  Wire.begin(18, 19);
 
   preferences.begin("Pot", false);
   minval = preferences.getInt("Min", 0);
@@ -330,7 +352,7 @@ void setup() {
 
   updateTimeNow();
 
-  // beca_check();
+  beca_check();
 
   if (beca_power == 1) {
     dampertsw = 1;
@@ -341,6 +363,230 @@ void setup() {
   }
   dmptempsp = setpointt;
   dmptemp = temp_by_beca;
+
+  setup_wifi_credentials();
+  macaddress = WiFi.macAddress();
+
+  server.on("/configure", HTTP_GET, [](AsyncWebServerRequest* request) {
+    // Create a response object
+    AsyncWebServerResponse* response = request->beginResponse(200, "text/html", wifimanager);
+
+    // Add CORS headers
+    response->addHeader("Access-Control-Allow-Origin", "*");  // Allow all origins
+    response->addHeader("Access-Control-Allow-Methods", "GET, POST");
+    response->addHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    // Send the response with headers
+    request->send(response);
+  });
+
+  // server.on("/configure", HTTP_GET, [](AsyncWebServerRequest* request) {
+  //   request->send_P(200, "text/html", wifimanager);
+  // });
+
+  server.on("/wifi_param_by_app", HTTP_OPTIONS, [](AsyncWebServerRequest* request) {
+    AsyncWebServerResponse* response = request->beginResponse(200);
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    response->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response->addHeader("Access-Control-Allow-Headers", "Content-Type");
+    request->send(response);
+  });
+
+  server.on(
+    "/wifi_param_by_app", HTTP_POST, [](AsyncWebServerRequest* request) {}, NULL, [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      StaticJsonDocument<512> doc;
+      DeserializationError error = deserializeJson(doc, data, len);
+
+      if (error) {
+        Serial.print("JSON Parsing Error: ");
+        Serial.println(error.c_str());
+        request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+        return;
+      }
+
+      const char* ssid = doc["ssid"];
+      const char* password = doc["password"];
+
+      if (!ssid || !password || strlen(ssid) == 0 || strlen(password) == 0) {
+        request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"SSID or password missing\"}");
+        return;
+      }
+
+      Serial.println("Received JSON Body:");
+      Serial.println("SSID: " + String(ssid));
+      Serial.println("Password: " + String(password));
+
+      preferences.begin("wifi_params", false);
+      preferences.putString("ssid", ssid);
+      preferences.putString("password", password);
+      preferences.end();
+
+      StaticJsonDocument<128> responseDoc;
+      responseDoc["status"] = "success";
+      responseDoc["message"] = "WiFi parameters saved. Restarting.";
+      String responseBody;
+      serializeJson(responseDoc, responseBody);
+      request->send(200, "application/json", responseBody);
+
+      delay(1000);
+      ESP.restart();
+    });
+
+  // server.on("/wifi_param", HTTP_POST, [](AsyncWebServerRequest* request) {
+  //     // Your logic for handling POST request
+  //     request->send(200, "text/plain", "Request Received");
+  // });
+
+
+  server.on("/wifi_param", HTTP_POST, [](AsyncWebServerRequest* request) {
+    int params = request->params();
+
+#ifdef DEBUG
+    Serial.println("Received POST request to /wifi_param");
+    Serial.print("Number of parameters: ");
+    Serial.println(params);
+    String body = "";
+    for (int i = 0; i < params; i++) {
+      AsyncWebParameter* p = request->getParam(i);
+      if (p->isPost()) {
+        body += p->name() + "=" + p->value() + "&";
+      }
+    }
+    if (body.length() > 0) {
+      body.remove(body.length() - 1);
+    }
+    Serial.println("POST Body: " + body);
+#endif
+
+    for (int i = 0; i < params; i++) {
+
+#ifdef DEBUG
+      Serial.println();
+      Serial.print("params:");
+      Serial.println(params);
+#endif
+
+      AsyncWebParameter* p = request->getParam(i);
+      if (p->isPost()) {
+        Serial.println(p->name());
+
+        if (p->name() == PARAM_INPUT_1) {
+          ssid = p->value().c_str();
+#ifdef DEBUG
+          Serial.print("SSID set to: ");
+          Serial.println(ssid);
+#endif
+        }
+        if (p->name() == PARAM_INPUT_2) {
+          password = p->value().c_str();
+#ifdef DEBUG
+          Serial.print("Password set to: ");
+          Serial.println(password);
+#endif
+        }
+      }
+    }
+    if (ssid.length() > 0 && password.length() > 0) {
+      request->send(200, "text/plain", "Done. ESP will restart, connect to your router.");
+
+      preferences.begin("wifi_params", false);
+
+      preferences.putString("ssid", ssid);
+      preferences.putString("password", password);
+
+      preferences.end();
+
+      delay(1000);
+      ESP.restart();
+    } else {
+      request->send(200, "text/plain", "Try Again. SSID or Password Invalid.");
+    }
+  });
+
+  // server.on("/wifi_param", HTTP_POST, [](AsyncWebServerRequest* request) {
+  //     int params = request->params();
+
+  //     #ifdef DEBUG
+  //         Serial.println("Received POST request to /wifi_param");
+  //         Serial.print("Number of parameters: ");
+  //         Serial.println(params);
+  //     #endif
+
+  //     String body = "";
+  //     for (int i = 0; i < params; i++) {
+  //         AsyncWebParameter* p = request->getParam(i);
+  //         if (p->isPost()) {
+  //             body += p->name() + "=" + p->value() + "&";
+  //         }
+  //     }
+
+  //     if (body.length() > 0) {
+  //         body.remove(body.length() - 1);
+  //     }
+
+  //     #ifdef DEBUG
+  //         Serial.println("POST Body: " + body);
+  //     #endif
+
+  //     for (int i = 0; i < params; i++) {
+  //         AsyncWebParameter* p = request->getParam(i);
+  //         if (p->isPost()) {
+  //             #ifdef DEBUG
+  //                 Serial.print("Parameter name: ");
+  //                 Serial.println(p->name());
+  //             #endif
+
+  //             if (p->name() == "ssid") {
+  //                 ssid = p->value().c_str();
+
+  //                 #ifdef DEBUG
+  //                     Serial.print("SSID set to: ");
+  //                     Serial.println(ssid);
+  //                 #endif
+  //             }
+
+  //             if (p->name() == "password") {
+  //                 password = p->value().c_str();
+
+  //                 #ifdef DEBUG
+  //                     Serial.print("Password set to: ");
+  //                     Serial.println(password);
+  //                 #endif
+  //             }
+  //         }
+  //     }
+
+  //     // Validate and save the SSID and Password
+  //     if (ssid.length() > 0 && password.length() > 0) {
+  //         request->send(200, "text/plain", "Done. ESP will restart, connect to your router.");
+
+  //         preferences.begin("wifi-config", false);
+  //         preferences.putString("ssid", ssid);
+  //         preferences.putString("password", password);
+  //         preferences.end();
+
+  //         delay(1000);
+  //         ESP.restart();
+  //     } else {
+  //         request->send(400, "text/plain", "Try Again. SSID or Password Invalid.");
+  //     }
+  // });
+
+  server.begin();
+
+
+#ifdef DEBUG
+  Serial.println("Server Begin");
+#endif
+
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  // client.setKeepAlive(60);
+  // client.setSocketTimeout(30);
+  // client.setBufferSize(1024);
+
+
+
 
 // Print the initial formatted time
 #ifdef DEBUG
@@ -392,23 +638,28 @@ String data = "";
 void loop() {
 
 
-  if (!client.connected()) {
-    reconnect();
-  }
+
 
   /*--------------- This code is for Get data from Mobile APP -------------*/
-  // unsigned long wait_time = millis();
-  // if (wait_time - previousMillis_1 >= 900) {
-  //   makestring();
-  //   savedatacommand = "http://209.38.236.253/api/savedata?id=" + myID + "&data=";
-  //   String combineddata = savedatacommand + dataarray;
-  //   get_api(combineddata);
-  //   setpoint_flag = true;
+  unsigned long wait_time = millis();
+  if (wait_time - previousMillis_1 >= 5000) {
+    // makestring();
+    // savedatacommand = "http://209.38.236.253/api/savedata?id=" + myID + "&data=";
+    // String combineddata = savedatacommand + dataarray;
+    // get_api(combineddata);
+    // setpoint_flag = true;
 
-  //   previousMillis_1 = wait_time;
+    previousMillis_1 = wait_time;
 
-  //   /* ----------------------------------------------------------------------------------------------- */
-  // }
+    if (!client.connected()) {
+      reconnect();
+    }
+    // Serial.println("Publishing Message!");
+    publishJson();
+    // client.publish("/KRC/1","Hello from ESP23 ZoneMaster with MQTT");
+
+    /* ----------------------------------------------------------------------------------------------- */
+  }
 
   /* --The below code is for get values of scheduled days and hours from preferences when there is some change from app-- */
 
@@ -432,12 +683,15 @@ void loop() {
 
   /*------------------------Check Internet Connectivity and Update Time---------------------------------------*/
 
-  if (WiFi.status() != WL_CONNECTED) {
-#ifdef DEBUG
-    Serial.println("Connected to Wifi");
-#endif
-    WiFi.begin(ssid.c_str(), password.c_str());
-  }
+  //   if (WiFi.status() != WL_CONNECTED) {
+  // #ifdef DEBUG
+  //     // Serial.println("Connected to Wifi");
+  // #endif
+  //     // WiFi.begin(ssid.c_str(), password.c_str());
+  //   }
+  // else{
+
+  // }
   // #ifdef DEBUG
   //   else {
   //     Serial.println("Connected to Wifi");
@@ -501,7 +755,7 @@ void loop() {
   //   }
   // }
 
-  // beca_check();
+  beca_check();
 
   if (cfmbutton != lst_cfmbutton) {
     if (bp < 11) {
@@ -714,14 +968,14 @@ void beca_check() {
 
       /*--------------- This code is for Get data from Mobile APP -------------*/
       unsigned long wait_time = millis();
-      if (wait_time - previousMillis_1 >= 900) {
-        makestring();
-        savedatacommand = "http://209.38.236.253/api/savedata?id=" + myID + "&data=";
-        String combineddata = savedatacommand + dataarray;
-        get_api(combineddata);
-        previousMillis_1 = wait_time;
-        /* ----------------------------------------------------------------------------------------------- */
-      }
+      // if (wait_time - previousMillis_1 >= 900) {
+      //   // makestring();
+      //   savedatacommand = "http://209.38.236.253/api/savedata?id=" + myID + "&data=";
+      //   String combineddata = savedatacommand + dataarray;
+      //   // get_api(combineddata);
+      //   previousMillis_1 = wait_time;
+      //   /* ----------------------------------------------------------------------------------------------- */
+      // }
       if (dampertsw == 1) {
         beca_power = 1;
         dampertsw = 1;
@@ -740,7 +994,7 @@ void beca_check() {
 
       /*------------------------Check Internet Connectivity and Update Time---------------------------------------*/
 
-      server.handleClient();
+      // server.handleClient();
 
       unsigned long wait_update_time = millis();
       if (wait_update_time - previousMillis_2 >= 60000) {
