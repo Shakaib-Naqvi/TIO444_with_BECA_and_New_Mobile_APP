@@ -17,7 +17,7 @@ int8_t wifi_channel = 0;
 //////////////////HMI Config HTML/////////////////////////////////
 const char wifimanager[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
-<title>BITA RMS</title>
+<title>BITA Zonemaster</title>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
@@ -337,11 +337,11 @@ void Access_Point() {
   Serial.println(IP);
 #endif
 
-// if (!MDNS.begin("esp32wifi")) {  //device_name.local
-//     return ;
-//   }
+  // if (!MDNS.begin("esp32wifi")) {  //device_name.local
+  //     return ;
+  //   }
 
-//   MDNS.addService("http", "tcp", 80);
+  //   MDNS.addService("http", "tcp", 80);
 }
 
 bool connect_to_wifi() {
@@ -420,6 +420,8 @@ void setup_wifi_credentials() {
   preferences.end();
 
 #ifdef DEBUG
+  Serial.print("Devicename: ");
+  Serial.println(devicename);
   Serial.print("ssid: ");
   Serial.println(ssid);
   Serial.print("password: ");

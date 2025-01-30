@@ -5,62 +5,6 @@
 
 // const char* ssid = "BITA HOMES";
 // const char* password = "xttok2fb";
-String Name = "ZoneMaster";
-String myID = "00000000000";
-String substrin1 = myID.substring(2, 6);
-String substrin2 = myID.substring(9, 11);
-String hostname = Name + substrin1 + substrin2;
-String devicename = "ZMB-AAA017";
-String savedatacommand = "";
-int device_type = 3;
-String devversion = "1.0";
-String macaddress = "";
-long disconnection_counter = 300;  //Once phone is connected to BLE, keep the connection for 300 seconds.
-long switchblecounter = 3;         //Try WIFI 10 times before turning on BLE
-
-
-String dataarray = "";
-
-uint8_t seasonsw = 0;
-int8_t dmptemp = 24;
-int8_t dmptempsp = 24;
-int8_t prevdmptempsp = 24;
-uint8_t dampertsw = 0;
-uint8_t prevdampertsw = 1;
-uint8_t start_value;
-uint8_t end_value;
-
-// String supcfm = "0-50";
-
-String supcfm = String(start_value) + "-" + String(end_value);
-String retcfm = "0-50";
-String timesch = "hoursch=24|daysch=7";
-bool timeschen = 0;
-bool dampstate = 0;
-String alarm_string = "0";
-String timenow = "010120120000";
-String myIP = "";
-long packet_sequence = 0;
-String lastcmd;
-
-String keys[] = { "seasonsw", "dmptemp", "dmptempsp", "dampertsw", "supcfm", "retcfm", "hoursch", "timeschen", "dampstate", "alarm", "timenow", "ip_address", "packet_id" };
-uint8_t numKeys = sizeof(keys) / sizeof(keys[0]);  // Get the number of keys
-
-const char* ntpServer = "time.google.com";
-const long gmtOffset_sec = 18000;
-const int daylightOffset_sec = 0;
-
-uint8_t mm = 1;      //month
-uint8_t dd = 1;      //date
-uint16_t yy = 2020;  //year
-uint8_t hh = 12;     //hour
-uint8_t mins = 0;    //minute
-uint8_t ss = 10;     //second
-String month = "Jan";
-uint8_t weekDay;
-uint8_t current_hour;
-bool days_in_num[7];
-bool hours_num[24];
 
 
 // server.on("/getinfo", HTTP_GET, [](AsyncWebServerRequest *request) {
