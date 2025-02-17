@@ -1,4 +1,4 @@
-const char* mqtt_server = "192.168.10.83";
+const char* mqtt_server = "192.168.18.112";
 // const char* mqtt_server = "192.168.18.112";
 
 
@@ -15,9 +15,6 @@ String macaddress = "";
 
 String device_topic_s = "/test/" + devicename + "/1"; // subscribe topic
 String device_topic_p = "/KRC/" + devicename; // publish topic
-
-long disconnection_counter = 300;  //Once phone is connected to BLE, keep the connection for 300 seconds.
-long switchblecounter = 3;         //Try WIFI 10 times before turning on BLE
 
 const int Buzzer_Pin = 25;
 
@@ -37,6 +34,7 @@ unsigned long previousMillis_2 = 0;
 unsigned long previousMillis_3 = 0;
 unsigned long previousMillis_4 = 0;
 unsigned long wait_update_time = 0;
+unsigned long wait_time = 0;
 bool show_time = false;
 const uint16_t interval = 2000;
 bool beca_power = false;

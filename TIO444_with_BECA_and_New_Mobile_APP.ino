@@ -112,44 +112,43 @@ void Extract_by_json(String incomingMessage) {
 
   cfm_flag = false;
 
-  if (beca_power != dampertsw) {
-    if (dampertsw == 1) {
-      beca_power = 1;
-      writeSingleRegister(1, 0x00, 1);
-    } else {
-      beca_power = 0;
-      writeSingleRegister(1, 0x00, 0);
+  if (beca_status != false) {
+    if (beca_power != dampertsw) {
+      if (dampertsw == 1) {
+        beca_power = 1;
+        writeSingleRegister(1, 0x00, 1);
+      } else {
+        beca_power = 0;
+        writeSingleRegister(1, 0x00, 0);
+      }
+    }
+
+    if (beca_mode != seasonsw) {
+      if (seasonsw == 1) {
+        beca_mode = 1;
+        writeSingleRegister(1, 0x02, 1);
+
+      } else {
+        beca_mode = 0;
+        writeSingleRegister(1, 0x02, 0);
+      }
+    }
+
+    if (setpointt != dmptempsp) {
+      if (dmptempsp >= 5 || dmptempsp < 36) {
+        setpointt = dmptempsp;
+        writeSingleRegister(1, 0x03, setpointt * 10);
+      }
     }
   }
 
-  if (beca_mode != seasonsw) {
-    if (seasonsw == 1) {
-      beca_mode = 1;
-      writeSingleRegister(1, 0x02, 1);
-
-    } else {
-      beca_mode = 0;
-      writeSingleRegister(1, 0x02, 0);
-    }
-  }
-
-  if (setpointt != dmptempsp) {
-    if (dmptempsp >= 5 || dmptempsp < 36) {
-      setpointt = dmptempsp;
-      writeSingleRegister(1, 0x03, setpointt * 10);
-    }
-  }
-
-  int dash_index = supcfm.indexOf("-");
-
-  start_value = supcfm.substring(0, dash_index).toInt();
-  // end_value = supcfm.substring(dash_index + 1).toInt();
   end_value = supcfm.toInt();
   CFM_max = map(end_value, 0, 100, servo_close_pos, servo_open_pos);
 
-  // writeSingleRegister(1, 0x03, setpointt * 10);
+  //--------Changes made in below line-------
+  MoveServo(CFM_max, 1, servo_delay);
+  //------------------------
 
-  // CFM
 #ifdef DEBUG
   Serial.println("");
   Serial.println("---------------------------------------------");
@@ -188,13 +187,13 @@ void Extract_by_json(String incomingMessage) {
 
 void publishJson() {
   StaticJsonDocument<512> doc;
-  doc["seasonsw"] = String(beca_mode);
-  doc["dmptemp"] = String(temp_by_beca);
-  doc["dmptempsp"] = String(setpointt);
-  doc["dampertsw"] = String(beca_power);
-  doc["supcfm"] = String(end_value);
-  
-  // doc["timenow"] = String(timenow);
+  doc["seasonsw"] = beca_mode;
+  doc["dmptemp"] = temp_by_beca;
+  doc["dmptempsp"] = setpointt;
+  doc["dampertsw"] = beca_power;
+  doc["supcfm"] = end_value;
+
+  // doc["timenow"] = timenow;
   if (dampertsw == 1) {
     doc["dampstate"] = "Open";
   } else {
@@ -209,7 +208,14 @@ void publishJson() {
 
   char jsonBuffer[512];
   size_t n = serializeJson(doc, jsonBuffer);
-  client.publish(device_topic_p.c_str(), jsonBuffer,true);
+
+  if (n >= sizeof(jsonBuffer)) {
+#ifdef DEBUG
+    Serial.println("JSON buffer overflow!");
+#endif
+    return;
+  }
+  client.publish(device_topic_p.c_str(), jsonBuffer, true);
 
   // {"seasonsw":"0","dmptemp":"28","dmptempsp":"20","dampertsw":"1","supcfm":"80","dampstate":"Open","mac_address":"C8:F0:9E:DF:C3:A0","ip_address":"192.168.18.165","ssid":"BITA DEV","password":"xttok2fb"}
 #ifdef DEBUG
@@ -228,10 +234,10 @@ void callback(char* topic, byte* message, unsigned int length) {
 
 
   if (String(topic) == device_topic_s) {  // /KRC2/ZMB-AAA018/1
+#ifdef DEBUG
     Serial.println("Message Received on: ");
     Serial.println(String(topic));
-    // Serial.println("Message Received on: ");
-    // Serial.println(String(message));
+#endif
     Extract_by_json(messageTemp);
   }
 }
@@ -279,9 +285,7 @@ void setup() {
   display.drawBitmap(1, 19, BITA_LOGO, 32, 32, SH110X_WHITE);
   display.display();
 
-
   Int_Servo();
-
 
   Wire.begin(18, 19);
 
@@ -307,17 +311,6 @@ void setup() {
 
   updateTimeNow();
 
-  beca_check();
-
-  if (beca_power == 1) {
-    dampertsw = 1;
-    dampstate = 1;
-  } else {
-    dampertsw = 0;
-    dampstate = 0;
-  }
-  dmptempsp = setpointt;
-  dmptemp = temp_by_beca;
 
   setup_wifi_credentials();
   macaddress = WiFi.macAddress();
@@ -479,6 +472,21 @@ void setup() {
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
 
+
+  beca_check();
+
+  if (beca_power == 1) {
+    dampertsw = 1;
+    dampstate = 1;
+  } else {
+    dampertsw = 0;
+    dampstate = 0;
+  }
+  dmptempsp = setpointt;
+  dmptemp = temp_by_beca;
+
+
+
   // publishJson();
 
   // client.setKeepAlive(60);
@@ -536,23 +544,16 @@ void loop() {
   }
 
   /*--------------- This code is for Get data from Mobile APP -------------*/
-  unsigned long wait_time = millis();
+  wait_time = millis();
   if (wait_time - previousMillis_1 >= 5000) {
-    // makestring();
-    // savedatacommand = "http://209.38.236.253/api/savedata?id=" + myID + "&data=";
-    // String combineddata = savedatacommand + dataarray;
-    // get_api(combineddata);
-    // setpoint_flag = true;
-
     previousMillis_1 = wait_time;
-    Serial.print("Stations connected: ");
-    Serial.println(WiFi.softAPgetStationNum());
+    // Serial.print("Stations connected: ");
+    // Serial.println(WiFi.softAPgetStationNum());
     if (!client.connected()) {
       reconnect();
     }
 
     publishJson();
-    // client.publish("/KRC/1","Hello from ESP23 ZoneMaster with MQTT");
 
     /* ----------------------------------------------------------------------------------------------- */
   }
@@ -595,7 +596,6 @@ void loop() {
           writeSingleRegister(1, 0x03, 30 * 10);
         } else {
           int8_t cfm_perc = setpointt % 10;
-          // Serial.println(cfm_perc);
           display.clearDisplay();
           display_on_OLED(&Org_01, 5, 10, 40, String(cfm_perc) + "0 %");
         }
@@ -660,7 +660,6 @@ void loop() {
     unsigned long currentMillis = millis();
     // Check if the value of register[3] has changed
     if (setpointt != last_setpoint) {
-      // if (cfm_flag == true) {
       cfm_duration = millis();
       if (setpointt > 20) {
         if (setpointt == 30) {
@@ -669,7 +668,6 @@ void loop() {
 
         } else if (setpointt > 30) {
           int8_t cfm_perc = setpointt % 10;
-          // Serial.println(cfm_perc);
           display.clearDisplay();
           display_on_OLED(&Org_01, 5, 1, 40, "100%");
           writeSingleRegister(1, 0x03, 30 * 10);
@@ -766,11 +764,25 @@ void beca_check() {
 
     while (beca_status == false) {
       beca_status = readHoldingRegisters(MODBUS_SLAVE_ID, MODBUS_REGISTER_ADDRESS, MODBUS_REGISTER_COUNT, registers);
+
+      client.loop();
+
       display.clearDisplay();
       display_on_OLED(&Org_01, 5, 2, 43, "Error");
 
+
       /*--------------- This code is for Get data from Mobile APP -------------*/
-      unsigned long wait_time = millis();
+      wait_time = millis();
+      if (wait_time - previousMillis_1 >= 5000) {
+        previousMillis_1 = wait_time;
+        if (!client.connected()) {
+          reconnect();
+        }
+
+        publishJson();
+
+        /* ----------------------------------------------------------------------------------------------- */
+      }
 
       if (dampertsw == 1) {
         beca_power = 1;
@@ -788,9 +800,7 @@ void beca_check() {
         MoveServo(servo_close_pos, 1, servo_delay);
       }
 
-      /*------------------------Check Internet Connectivity and Update Time---------------------------------------*/
-
-      // server.handleClient();
+      /*------------------------Update Time---------------------------------------*/
 
       wait_update_time = millis();
       if (wait_update_time - previousMillis_2 >= 60000) {

@@ -13,7 +13,7 @@ void Int_Servo() {
 }
 
 void MoveServo(uint8_t degrees, int steps, int del) {
-  int position = last_pos_servo;
+  int8_t position = last_pos_servo;
   if (degrees < 0 || degrees > 180) {
     degrees = 0;
   }  //

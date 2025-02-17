@@ -13,9 +13,6 @@ index 0 = Thermostat State ( 0 - 1)
 9 = Thermostat Output (0-1)
 */
 
-
-
-// Define modbus parameters and variables
 #define MODBUS_SLAVE_ID 0x01
 #define MODBUS_FUNCTION_READ_HOLDING_REGISTERS 0x03
 #define MODBUS_REGISTER_ADDRESS 0x0000
@@ -26,10 +23,6 @@ index 0 = Thermostat State ( 0 - 1)
 // #define RS485_DE_RE_PIN 5  // DE and RE pins tied together and connected to GPIO 5
 HardwareSerial RS485Serial(1);
 uint16_t registers[MODBUS_REGISTER_COUNT];
-
-// #define MODBUS true
-// #define CANBUS false
-
 
 uint16_t calculateCRC16(uint8_t *data, uint16_t length) {
   uint16_t crc = 0xFFFF;
@@ -94,9 +87,9 @@ bool readHoldingRegisters(uint8_t slaveId, uint16_t startAddress, uint16_t regis
       Serial.println("CRC error!");
 #endif
       RS485Serial.end();
-      delay(50);  // Allow time for the line to stabilize
+      delay(50); 
       RS485Serial.begin(MODBUS_BAUD_RATE, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
-      delay(50);  // Allow time for re-initialization
+      delay(50); 
     }
   } else {
 #ifdef DEBUG
@@ -106,29 +99,6 @@ bool readHoldingRegisters(uint8_t slaveId, uint16_t startAddress, uint16_t regis
   return false;
 }
 
-
-// int read_beca(uint8_t register_value) {
-//   if (readHoldingRegisters(MODBUS_SLAVE_ID, MODBUS_REGISTER_ADDRESS, MODBUS_REGISTER_COUNT, registers)) {
-//     for (int i = 0; i < MODBUS_REGISTER_COUNT; i++) {
-// #ifdef DEBUG
-//       Serial.print("Register ");
-//       Serial.print(MODBUS_REGISTER_ADDRESS + i);
-//       Serial.print(": ");
-//       Serial.println(registers[i]);
-// #endif
-//     }
-//   } else {
-// #ifdef DEBUG
-//     Serial.println("Failed to read registers");
-// #endif
-//   }
-//   int value_of_register = registers[register_value];
-//   return value_of_register;
-// }
-
-
-
-// #define DEBUG
 void writeSingleRegister(uint8_t slaveId, uint16_t address, uint16_t value) {
   // Set the DE/RE pin high to enable RX mode
   // digitalWrite(RS485_DE_RE_PIN, LOW);
@@ -147,7 +117,6 @@ void writeSingleRegister(uint8_t slaveId, uint16_t address, uint16_t value) {
   // Set the DE/RE pin low to enable TX mode
   // digitalWrite(RS485_DE_RE_PIN, HIGH);
 
-  // Wait for the transmission to complete
   RS485Serial.flush();
 
 
@@ -160,5 +129,4 @@ void writeSingleRegister(uint8_t slaveId, uint16_t address, uint16_t value) {
   Serial.println();
 #endif
   readHoldingRegisters(MODBUS_SLAVE_ID, MODBUS_REGISTER_ADDRESS, MODBUS_REGISTER_COUNT, registers);
-  // delay(100);  // Small delay to ensure the slave device processes the request
 }

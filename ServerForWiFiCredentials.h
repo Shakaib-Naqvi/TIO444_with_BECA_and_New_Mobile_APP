@@ -447,28 +447,7 @@ void setup_wifi_credentials() {
     Access_Point();
   }
 
-  // server.on("/getdeviceinfo", HTTP_GET, handlegetinfo);
-
-  // server.on("/", handleRoot);
-  // server.on("/wifi", HTTP_POST, handleWifiCredentials);
-  // server.on("/wifi-credentials", HTTP_POST, handleWifiConfig);
-  // server.begin();
-
 #ifdef DEBUG
   Serial.println("Server Begin");
 #endif
 }
-
-// void handleDelete() {
-//   // Delete stored credentials from preferences
-
-//   // Add Status Flag
-
-//   preferences.remove("ssid");
-//   preferences.remove("password");
-//   preferences.remove("uid");
-//   preferences.remove("api");
-
-//   // Restart ESP32
-//   ESP.restart();
-// }
