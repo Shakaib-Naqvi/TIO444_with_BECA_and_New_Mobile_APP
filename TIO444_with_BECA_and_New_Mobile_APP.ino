@@ -142,11 +142,16 @@ void Extract_by_json(String incomingMessage) {
     }
   }
 
-  end_value = supcfm.toInt();
-  CFM_max = map(end_value, 0, 100, servo_close_pos, servo_open_pos);
+  end_value_app = supcfm.toInt();
+  new_cfm = map(end_value_app, 0, 100, servo_close_pos, servo_open_pos);
 
   //--------Changes made in below line-------
+
+  if(new_cfm != CFM_max){
+    CFM_max = new_cfm;
   MoveServo(CFM_max, 1, servo_delay);
+
+  }
   //------------------------
 
 #ifdef DEBUG
@@ -187,11 +192,12 @@ void Extract_by_json(String incomingMessage) {
 
 void publishJson() {
   StaticJsonDocument<512> doc;
-  doc["seasonsw"] = beca_mode;
-  doc["dmptemp"] = temp_by_beca;
-  doc["dmptempsp"] = setpointt;
-  doc["dampertsw"] = beca_power;
-  doc["supcfm"] = end_value;
+
+  doc["seasonsw"] = String(beca_mode);
+  doc["dmptemp"] = String(temp_by_beca);
+  doc["dmptempsp"] = String(setpointt);
+  doc["dampertsw"] = String(beca_power);
+  doc["supcfm"] = String(end_value);
 
   // doc["timenow"] = timenow;
   if (dampertsw == 1) {
@@ -205,6 +211,8 @@ void publishJson() {
   doc["password"] = password;
   doc["comment"] = "From Damper";
   // doc["dampstate"] = "open";
+
+
 
   char jsonBuffer[512];
   size_t n = serializeJson(doc, jsonBuffer);

@@ -49,6 +49,7 @@ int16_t cfm;
 bool cfm_flag = false;
 uint16_t save_setpointt = 0;
 int8_t CFM_max = servo_open_pos;
+int8_t new_cfm = servo_open_pos;
 int8_t CFM_min = servo_close_pos;
 int16_t minval, maxval;
 bool update_from_pref = true;
@@ -65,6 +66,7 @@ uint8_t dampertsw = 0;
 uint8_t prevdampertsw = 1;
 uint8_t start_value;
 uint8_t end_value = 10;
+uint8_t end_value_app = 10;
 
 // String supcfm = "0-50";
 
