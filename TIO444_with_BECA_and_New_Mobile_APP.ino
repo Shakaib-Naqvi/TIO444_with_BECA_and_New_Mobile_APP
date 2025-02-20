@@ -146,11 +146,11 @@ void Extract_by_json(String incomingMessage) {
   new_cfm = map(end_value_app, 0, 100, servo_close_pos, servo_open_pos);
 
   //--------Changes made in below line-------
+  end_value = end_value_app;
 
-  if(new_cfm != CFM_max){
+  if (new_cfm != CFM_max) {
     CFM_max = new_cfm;
-  MoveServo(CFM_max, 1, servo_delay);
-
+    MoveServo(CFM_max, 1, servo_delay);
   }
   //------------------------
 
