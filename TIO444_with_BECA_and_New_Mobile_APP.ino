@@ -1,4 +1,5 @@
 #define DEBUG
+#define MQTT_MAX_PACKET_SIZE 1024
 
 #include "variables.h"
 
