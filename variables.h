@@ -1,5 +1,8 @@
-const char* mqtt_server = "192.168.18.112";
 // const char* mqtt_server = "192.168.18.112";
+// const char* mqtt_server = "192.168.18.112";
+
+const char* mqtt_server = "a31qubhv0f0qec-ats.iot.eu-north-1.amazonaws.com";
+const int mqtt_port = 8883;
 
 
 String Name = "ZoneMaster";
@@ -7,7 +10,7 @@ String myID = "00000000000";
 String substrin1 = myID.substring(2, 6);
 String substrin2 = myID.substring(9, 11);
 String hostname = Name + substrin1 + substrin2;
-String devicename = "ZMB-AAA016";
+String devicename = "ZMB-AAA001";
 String savedatacommand = "";
 int device_type = 3;
 String devversion = "1.0";

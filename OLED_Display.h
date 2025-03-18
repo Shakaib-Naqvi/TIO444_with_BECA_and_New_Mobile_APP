@@ -1,6 +1,5 @@
 
 #include <SPI.h>
-#include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <Fonts/FreeSans12pt7b.h>      // Example font
@@ -70,24 +69,6 @@ const unsigned char myBitmap_2[] PROGMEM = {
   0xff, 0xff, 0xff, 0xe1, 0xf1, 0xff, 0xff, 0xf7, 0xff, 0xff, 0xff, 0xe1, 0xc1, 0xff, 0xff, 0xf7
 };  // Picture
 
-// void setup() {
-
-//   Serial.begin(9600);
-
-//   delay(250);                        // wait for the OLED to power up
-//   display.begin(OLED_Address, true);  // Address 0x3C default
-//                                      //display.setContrast (0); // dim display
-
-//   display.clearDisplay();
-
-//   // Draw the bitmap at position (0,0)
-//   display.drawBitmap(32, 0, myBitmap_2, 64, 64, SH110X_WHITE);
-
-//   // Display the image
-//   display.display();
-//   delay(2000);
-
-// }
 
 
 void display_on_OLED(const GFXfont *font_style, uint8_t font_size, int16_t x, int16_t y, String text) {
@@ -117,34 +98,3 @@ void display_temp_on_OLED(const GFXfont *font_style, uint8_t font_size_1, uint8_
   display.display();
 
 }
-
-
-// void loop() {
-
-//   display.clearDisplay();
-
-//   display_on_OLED(&FreeMonoBold9pt7b, 2, 35, 43, "BITA");
-
-//   display.fillRect(0, 0, display.width(), display.height() / 16, SH110X_WHITE);
-//   display.fillRect(0, 15 * (display.height() / 16), display.width(), display.height() / 16, SH110X_WHITE);
-//   display.drawBitmap(1, 19, BITA_LOGO, 32, 32, SH110X_WHITE);
-//   display.display();
-//   delay(1000);
-
-//   display.clearDisplay();
-//   display_on_OLED(&FreeMonoBold12pt7b, 1, 15, 43, "Sep 16");
-//   delay(1000);
-
-//   display.clearDisplay();
-//   display_on_OLED(&FreeMonoBold9pt7b, 2, 10, 40, "03:36");
-//   delay(1000);
-
-//   for (int i = 0; i < 10; i++) {
-
-//     display.clearDisplay();
-//     display_on_OLED(&FreeMonoBold12pt7b, 2, 10, 43, "2" + String(i));
-//     display_on_OLED(&FreeMonoBold12pt7b, 1, 70, 22, "o");
-//     display_on_OLED(&FreeMonoBold12pt7b, 2, 95, 43, "C");
-//     delay(400);
-//   }
-// }

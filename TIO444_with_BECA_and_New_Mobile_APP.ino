@@ -4,16 +4,16 @@
 #include "variables.h"
 
 #include <Preferences.h>
-#include <ESPmDNS.h>
-
 Preferences preferences;
 
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
+#include <WiFiClientSecure.h>
 
-WiFiClient espClient;
+
+WiFiClientSecure espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
 char msg[50];
@@ -25,6 +25,8 @@ int value = 0;
 #include "Servo.h"
 #include "ServerForWiFiCredentials.h"
 #include "OLED_Display.h"
+#include "aws_cred.h"
+
 
 void Pot_Calib(int16_t min, int16_t max) {
   if (min == 0 || max == 0) {
@@ -93,189 +95,6 @@ int16_t ReadPot(int16_t potPin) {
   return mappedValue;
 }
 
-void Extract_by_json(String incomingMessage) {
-  StaticJsonDocument<512> doc;
-
-  DeserializationError error = deserializeJson(doc, incomingMessage);
-  if (error) {
-#ifdef DEBUG
-    Serial.print("JSON deserialization failed: ");
-    Serial.println(error.c_str());
-#endif
-    return;
-  }
-
-  seasonsw = doc["seasonsw"].as<int>();
-  dmptempsp = doc["dmptempsp"].as<int>();
-  dampertsw = doc["dampertsw"].as<int>();
-  supcfm = doc["supcfm"].as<String>();
-  dampstate = doc["dampstate"].as<int>();
-
-  cfm_flag = false;
-
-  if (beca_status != false) {
-    if (beca_power != dampertsw) {
-      if (dampertsw == 1) {
-        beca_power = 1;
-        writeSingleRegister(1, 0x00, 1);
-      } else {
-        beca_power = 0;
-        writeSingleRegister(1, 0x00, 0);
-      }
-    }
-
-    if (beca_mode != seasonsw) {
-      if (seasonsw == 1) {
-        beca_mode = 1;
-        writeSingleRegister(1, 0x02, 1);
-
-      } else {
-        beca_mode = 0;
-        writeSingleRegister(1, 0x02, 0);
-      }
-    }
-
-    if (setpointt != dmptempsp) {
-      if (dmptempsp >= 5 || dmptempsp < 36) {
-        setpointt = dmptempsp;
-        writeSingleRegister(1, 0x03, setpointt * 10);
-      }
-    }
-  }
-
-  end_value_app = supcfm.toInt();
-  new_cfm = map(end_value_app, 0, 100, servo_close_pos, servo_open_pos);
-
-  //--------Changes made in below line-------
-  end_value = end_value_app;
-
-  if (new_cfm != CFM_max) {
-    CFM_max = new_cfm;
-    MoveServo(CFM_max, 1, servo_delay);
-  }
-  //------------------------
-
-#ifdef DEBUG
-  Serial.println("");
-  Serial.println("---------------------------------------------");
-
-
-
-  Serial.print("beca_power: ");
-  Serial.println(beca_power);
-  Serial.print("beca_mode: ");
-  Serial.println(beca_mode);
-  Serial.print("setpointt: ");
-  Serial.println(setpointt);
-  Serial.print("CFM_max: ");
-  Serial.println(CFM_max);
-
-  Serial.println("Extracted Values:");
-  Serial.print("Season Switch: ");
-  Serial.println(beca_mode);
-  Serial.print("DMP Temp SP: ");
-  Serial.println(setpointt);
-  Serial.print("Power: ");
-  Serial.println(beca_power);
-  Serial.print("Supply CFM: ");
-  Serial.println(supcfm);
-  Serial.print("Time Schedule: ");
-  Serial.println(timesch);
-  Serial.print("Damper State: ");
-  Serial.println(dampstate);
-  // Serial.print("Packet ID: ");
-  // Serial.println(packet_id);
-  Serial.println("------------------------------------------------");
-  Serial.println("");
-
-#endif
-}
-
-void publishJson() {
-  StaticJsonDocument<512> doc;
-
-  doc["seasonsw"] = String(beca_mode);
-  doc["dmptemp"] = String(temp_by_beca);
-  doc["dmptempsp"] = String(setpointt);
-  doc["dampertsw"] = String(beca_power);
-  doc["supcfm"] = String(end_value);
-
-  // doc["timenow"] = timenow;
-  if (dampertsw == 1) {
-    doc["dampstate"] = "Open";
-  } else {
-    doc["dampstate"] = "Close";
-  }
-  doc["mac_address"] = macaddress;
-  doc["ip_address"] = myIP;
-  doc["ssid"] = ssid;
-  doc["password"] = password;
-  doc["comment"] = "From Damper";
-  // doc["dampstate"] = "open";
-
-
-
-  char jsonBuffer[512];
-  size_t n = serializeJson(doc, jsonBuffer);
-
-  if (n >= sizeof(jsonBuffer)) {
-#ifdef DEBUG
-    Serial.println("JSON buffer overflow!");
-#endif
-    return;
-  }
-  client.publish(device_topic_p.c_str(), jsonBuffer, true);
-
-  // {"seasonsw":"0","dmptemp":"28","dmptempsp":"20","dampertsw":"1","supcfm":"80","dampstate":"Open","mac_address":"C8:F0:9E:DF:C3:A0","ip_address":"192.168.18.165","ssid":"BITA DEV","password":"xttok2fb"}
-#ifdef DEBUG
-  Serial.println("");
-  Serial.println(jsonBuffer);
-  Serial.println("JSON message published");
-#endif
-}
-
-void callback(char* topic, byte* message, unsigned int length) {
-  String messageTemp;
-
-  for (int i = 0; i < length; i++) {
-    messageTemp += (char)message[i];
-  }
-
-
-  if (String(topic) == device_topic_s) {  // /KRC2/ZMB-AAA018/1
-#ifdef DEBUG
-    Serial.println("Message Received on: ");
-    Serial.println(String(topic));
-#endif
-    Extract_by_json(messageTemp);
-  }
-}
-
-void reconnect() {
-  if (WiFi.status() != WL_CONNECTED) {
-#ifdef DEBUG
-    Serial.println("Wi-Fi is not connected. Attempting to reconnect...");
-#endif
-    return;
-  }
-  if (!client.connected()) {
-#ifdef DEBUG
-    Serial.print("Attempting MQTT connection...");
-#endif
-    if (client.connect(devicename.c_str())) {
-#ifdef DEBUG
-      Serial.println("connected");
-#endif
-      client.subscribe(device_topic_s.c_str());
-    } else {
-#ifdef DEBUG
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 10 milliseconds");
-#endif
-    }
-  }
-}
 
 
 void setup() {
@@ -335,29 +154,6 @@ void setup() {
     // Send the response with headers
     request->send(response);
   });
-
-  // server.on("/getinfo", HTTP_GET, [](AsyncWebServerRequest* request) {
-  //   StaticJsonDocument<256> jsonDoc;
-  //   jsonDoc["mac_address"] = macaddress;
-  //   jsonDoc["ip_address"] = myIP;
-  //   jsonDoc["ssid"] = ssid;
-  //   jsonDoc["password"] = password;
-
-  //   String jsonString;
-  //   serializeJson(jsonDoc, jsonString);
-
-  //   AsyncWebServerResponse* response = request->beginResponse(200, "application/json", jsonString);
-
-  //   response->addHeader("Access-Control-Allow-Origin", "*");
-  //   response->addHeader("Access-Control-Allow-Methods", "GET, POST");
-  //   response->addHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  //   request->send(response);
-  // });
-
-  // server.on("/configure", HTTP_GET, [](AsyncWebServerRequest* request) {
-  //   request->send_P(200, "text/html", wifimanager);
-  // });
 
   server.on("/wifi_param_by_app", HTTP_OPTIONS, [](AsyncWebServerRequest* request) {
     AsyncWebServerResponse* response = request->beginResponse(200);
@@ -478,10 +274,6 @@ void setup() {
   Serial.println("Server Begin");
 #endif
 
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-
-
   beca_check();
 
   if (beca_power == 1) {
@@ -566,6 +358,7 @@ void loop() {
 
     /* ----------------------------------------------------------------------------------------------- */
   }
+  client.loop();
 
 
   beca_check();
@@ -741,7 +534,6 @@ void loop() {
       }
     }
   }
-  client.loop();
 }
 
 void beca_check() {
