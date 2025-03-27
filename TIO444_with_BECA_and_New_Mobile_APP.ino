@@ -328,6 +328,9 @@ void setup() {
   Serial.print("timeschen: ");
   Serial.println(timeschen);
 #endif
+  if (!client.connected()) {
+    reconnect();
+  }
   Beep(200, 1);
 }
 
@@ -348,12 +351,13 @@ void loop() {
   wait_time = millis();
   if (wait_time - previousMillis_1 >= 5000) {
     previousMillis_1 = wait_time;
+    Serial.println("Message sent after 5 sec");
     // Serial.print("Stations connected: ");
     // Serial.println(WiFi.softAPgetStationNum());
     if (!client.connected()) {
       reconnect();
     }
-
+    // Serial.println("Message sent after 2 sec of message received");
     publishJson();
 
     /* ----------------------------------------------------------------------------------------------- */

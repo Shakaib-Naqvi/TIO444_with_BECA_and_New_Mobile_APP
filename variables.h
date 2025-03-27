@@ -22,7 +22,7 @@ String device_topic_p = "/KRC/" + devicename; // publish topic
 const int Buzzer_Pin = 25;
 
 int16_t servo_open_pos = 135;
-int16_t servo_close_pos = 38;
+int16_t servo_close_pos = 40;
 int16_t last_pos_servo;
 int8_t servo_delay = 35;
 bool beca_status = false;
