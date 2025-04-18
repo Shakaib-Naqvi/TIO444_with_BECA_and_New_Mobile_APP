@@ -10,7 +10,7 @@ String myID = "00000000000";
 String substrin1 = myID.substring(2, 6);
 String substrin2 = myID.substring(9, 11);
 String hostname = Name + substrin1 + substrin2;
-String devicename = "ZMB-AAA018";
+String devicename = "ZMB-AAA012";
 String savedatacommand = "";
 int device_type = 3;
 String devversion = "1.0";
@@ -21,8 +21,8 @@ String device_topic_p = "/KRC/" + devicename; // publish topic
 
 const int Buzzer_Pin = 25;
 
-int16_t servo_open_pos = 95;
-int16_t servo_close_pos = 10;
+int16_t servo_open_pos = 132;
+int16_t servo_close_pos = 42;
 int16_t last_pos_servo;
 int8_t servo_delay = 35;
 bool beca_status = false;

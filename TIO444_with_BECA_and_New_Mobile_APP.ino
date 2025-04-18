@@ -103,6 +103,8 @@ void setup() {
   Serial.begin(115200);
 #endif
 
+  Wire.begin(18, 19);
+
   display.begin(OLED_Address, true);  // Address 0x3C default
 
   display.clearDisplay();
@@ -115,7 +117,7 @@ void setup() {
 
   Int_Servo();
 
-  Wire.begin(18, 19);
+  // Wire.begin(18, 19);
 
   preferences.begin("Pot", false);
   minval = preferences.getInt("Min", 0);
