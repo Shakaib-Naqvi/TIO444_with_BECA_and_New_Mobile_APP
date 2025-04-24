@@ -86,12 +86,14 @@ void publishJson() {
   doc["supcfm"] = String(end_value);
 
   // doc["timenow"] = timenow;
-  if (dampertsw == 1) {
+  if (dampstate == 1) {
     doc["dampstate"] = "Open";
   } else {
     doc["dampstate"] = "Close";
   }
   doc["mac_address"] = macaddress;
+  doc["timesch"] = timesch;
+  doc["timeschen"] = String(timeschen);
   doc["ip_address"] = myIP;
   doc["ssid"] = ssid;
   doc["password"] = password;
@@ -120,6 +122,77 @@ void publishJson() {
 }
 
 
+
+void hour_day(String hours_ch, String days_ch) {
+  int8_t length_of_hours = 1;
+  for (uint8_t i = 0; i < 24; i++) {
+    hours_num[i] = false;
+  }
+
+  for (uint8_t i = 0; i < hours_ch.length(); i++) {
+    if (hours_ch.charAt(i) == ',') {
+      length_of_hours++;
+    }
+  }
+  // length_of_hours = length_of_hours + 1;
+  int8_t hours_start = 0;
+  uint8_t hours_end = hours_ch.indexOf(',');
+
+  for (uint8_t i = 0; i < length_of_hours; i++) {
+    if (hours_end == -1) {
+      // Handle the last element in the string
+      hours_end = hours_ch.length();
+      Serial.print("hours_end: ");
+      Serial.println(hours_end);
+    }
+    int8_t hoursnum = hours_ch.substring(hours_start, hours_end).toInt();
+    hours_start = hours_end + 1;
+    hours_end = hours_ch.indexOf(',', hours_start);
+    hours_num[hoursnum] = true;
+  }
+
+  int8_t length_of_days_ch = 1;
+  for (uint8_t i = 0; i < 7; i++) {
+    days_in_num[i] = false;
+  }
+  // days_in_num[] = { false, false, false, false, false, false, false };
+  //  { 0 = Monday, 1 = Tuesday, 2 = Wednesday, 3 = Thursday, 4 = Friday, 5 = Saturday, 6 = Sunday }
+
+  // Calculate the number of days in the string
+  length_of_days_ch = 1;
+  for (uint8_t i = 0; i < days_ch.length(); i++) {
+    if (days_ch.charAt(i) == ',') {
+      length_of_days_ch++;
+    }
+  }
+
+  int8_t day_start = 0;
+  uint8_t day_end = days_ch.indexOf(',');
+
+  for (int8_t i = 0; i < length_of_days_ch; i++) {
+    if (day_end == -1) {
+      // Handle the last element in the string
+      day_end = days_ch.length();
+    }
+    int8_t daynum = days_ch.substring(day_start, day_end).toInt();
+    day_start = day_end + 1;
+    day_end = days_ch.indexOf(',', day_start);
+    days_in_num[daynum] = true;
+  }
+
+  preferences.begin("timeenable", false);
+  for (int8_t i = 0; i < 24; i++) {
+    String hours_key = "hours_key" + String(i);
+    preferences.putBool(hours_key.c_str(), hours_num[i]);
+  }
+  for (int8_t i = 0; i < 7; i++) {
+    String days_key = "days_key" + String(i);
+    preferences.putBool(days_key.c_str(), days_in_num[i]);
+  }
+  preferences.end();
+}
+
+
 void Extract_by_json(String incomingMessage) {
   StaticJsonDocument<512> doc;
 
@@ -133,12 +206,22 @@ void Extract_by_json(String incomingMessage) {
   }
   if (doc.containsKey("seasonsw")) {
     seasonsw = doc["seasonsw"].as<int>();
+  } else {
+    if (beca_mode == 0 || beca_mode == 2) {
+      seasonsw = 0;
+    } else {
+      seasonsw = 1;
+    }
   }
   if (doc.containsKey("dmptempsp")) {
     dmptempsp = doc["dmptempsp"].as<int>();
+  } else {
+    setpointt = dmptempsp;
   }
   if (doc.containsKey("dampertsw")) {
     dampertsw = doc["dampertsw"].as<int>();
+  } else {
+    dampertsw = beca_power;
   }
   if (doc.containsKey("supcfm")) {
     supcfm = doc["supcfm"].as<String>();
@@ -156,6 +239,59 @@ void Extract_by_json(String incomingMessage) {
   if (doc.containsKey("dampstate")) {
     dampstate = doc["dampstate"].as<int>();
   }
+  preferences.begin("timeenable", false);
+
+  if (doc.containsKey("timesch")) {
+    timesch = doc["timesch"].as<String>();
+
+#ifdef DEBUG
+    Serial.print("timesch:: ");
+    Serial.println(timesch);
+#endif
+
+    String hoursch = timesch.substring(timesch.indexOf("hoursch="), timesch.indexOf("|daysch="));
+    String daysch = timesch.substring(timesch.indexOf("|daysch="));
+
+    timesch = hoursch + daysch;
+    preferences.putString("timesch", timesch);
+
+
+
+#ifdef DEBUG
+    Serial.print("timesch:: ");
+    Serial.println(timesch);
+#endif
+
+    hoursch = timesch.substring(timesch.indexOf("hoursch="), timesch.indexOf("|daysch="));
+    int8_t hourss = timesch.indexOf("hoursch=");
+    if (hourss != -1) {
+      hoursch = timesch.substring(hourss + 8);
+    }
+
+#ifdef DEBUG
+    Serial.print("hoursch:: ");
+    Serial.println(hoursch);
+#endif
+
+    int8_t days = timesch.indexOf("daysch=");
+    if (days != -1) {
+      daysch = timesch.substring(days + 7);
+    }
+
+
+#ifdef DEBUG
+    Serial.print("daysch:: ");
+    Serial.println(daysch);
+#endif
+    hour_day(hoursch, daysch);
+  }
+
+
+  if (doc.containsKey("timeschen")) {
+    timeschen = doc["timeschen"].as<int>();
+    preferences.putBool("timeschen", timeschen);
+  }
+  preferences.end();
 
   cfm_flag = false;
 
@@ -223,6 +359,8 @@ void Extract_by_json(String incomingMessage) {
   Serial.println(supcfm);
   Serial.print("Time Schedule: ");
   Serial.println(timesch);
+  Serial.print("Time Schedule Enable: ");
+  Serial.println(timeschen);
   Serial.print("Damper State: ");
   Serial.println(dampstate);
   // Serial.print("Packet ID: ");

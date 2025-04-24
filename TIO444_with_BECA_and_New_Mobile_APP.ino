@@ -131,6 +131,12 @@ void setup() {
   pinMode(Buzzer_Pin, OUTPUT);
   digitalWrite(Buzzer_Pin, LOW);
 
+#ifdef DEBUG
+  Serial.print("servo_open_pos: ");
+  Serial.println(servo_open_pos);
+  Serial.print("servo_close_pos: ");
+  Serial.println(servo_close_pos);
+#endif
   MoveServo(servo_open_pos, 1, servo_delay);
   delay(1000);
   MoveServo(servo_close_pos, 1, servo_delay);
