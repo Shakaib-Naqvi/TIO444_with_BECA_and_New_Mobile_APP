@@ -359,7 +359,9 @@ void loop() {
   wait_time = millis();
   if (wait_time - previousMillis_1 >= 5000) {
     previousMillis_1 = wait_time;
+#ifdef DEBUG
     Serial.println("Message sent after 5 sec");
+#endif
     // Serial.print("Stations connected: ");
     // Serial.println(WiFi.softAPgetStationNum());
     if (!client.connected()) {
